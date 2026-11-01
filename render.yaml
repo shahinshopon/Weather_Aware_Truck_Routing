@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: weather-aware-truck-routing-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 60
+    healthCheckPath: /api/v1/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.2
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: ROUTING_PROVIDER
+        value: ors
+      - key: WEATHER_PROVIDER
+        value: open_meteo
+      - key: CORS_ALLOW_ALL
+        value: "True"
+      - key: ORS_API_KEY
+        sync: false
