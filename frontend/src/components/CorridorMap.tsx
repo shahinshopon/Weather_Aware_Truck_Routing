@@ -16,6 +16,11 @@ import {
   CloudRain,
   Snowflake,
   Navigation,
+  Eye,
+  EyeOff,
+  Flame,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 interface CorridorMapProps {
@@ -202,11 +207,14 @@ export const CorridorMap: React.FC<CorridorMapProps> = ({
     heatmapLayer,
     heatmapOpacity,
     sliderHour,
+    setHeatmapEnabled,
+    setHeatmapLayer,
   } = useTripStore();
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [showLegendDetails, setShowLegendDetails] = useState(false);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const truckMarkerRef = useRef<maplibregl.Marker | null>(null);
   const originDestMarkersRef = useRef<maplibregl.Marker[]>([]);
@@ -841,7 +849,7 @@ export const CorridorMap: React.FC<CorridorMapProps> = ({
                   {selectedRoute.metrics.maxLevel}
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-[11px] text-slate-400 hidden sm:block">
                 Click any checkpoint marker or alternate dashed route to inspect
               </div>
             </div>
@@ -849,69 +857,133 @@ export const CorridorMap: React.FC<CorridorMapProps> = ({
         </div>
       )}
 
-      {/* Bottom-Left Map Legend (MP-8: Color + Shape + Active Layer Thresholds) */}
-      <div className="absolute bottom-3 left-3 z-10 bg-slate-900/92 backdrop-blur-md border border-slate-700/80 rounded-lg p-2.5 shadow-xl max-w-md pointer-events-auto">
-        <div className="flex items-center justify-between gap-4 mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-sky-400" />
-            <span>Risk & Checkpoint Legend (Color + Shape)</span>
-          </span>
-          <span className="text-[10px] font-mono text-sky-300 bg-sky-950/70 px-1.5 py-0.5 rounded border border-sky-800/60">
-            Layer: {heatmapLayer.toUpperCase()}
-          </span>
-        </div>
+      {/* Top-Right Floating Map Layer Pill (Google Maps / Windy style quick switcher) */}
+      <div className="absolute top-3 right-12 z-10 hidden sm:flex items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1 shadow-lg pointer-events-auto">
+        <button
+          type="button"
+          onClick={() => setHeatmapEnabled(!heatmapEnabled)}
+          title={heatmapEnabled ? "Hide Corridor Heatmap" : "Show Corridor Heatmap"}
+          className={`px-2 py-1 rounded text-[11px] font-semibold inline-flex items-center gap-1 transition ${
+            heatmapEnabled
+              ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          {heatmapEnabled ? (
+            <Eye className="w-3.5 h-3.5" />
+          ) : (
+            <EyeOff className="w-3.5 h-3.5" />
+          )}
+          <span>Heatmap</span>
+        </button>
 
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-[11px]">
-          {ORDERED_LEVELS.map((lvl) => (
-            <div
-              key={lvl}
-              className="flex items-center gap-1.5 px-1.5 py-1 rounded bg-slate-950/70 border border-slate-800"
-            >
-              <span
-                className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                style={{ backgroundColor: RISK_COLORS[lvl] }}
+        {(
+          [
+            { id: "risk", label: "Risk", icon: <Flame className="w-3 h-3" /> },
+            { id: "wind", label: "Wind", icon: <Wind className="w-3 h-3" /> },
+            { id: "rain", label: "Rain", icon: <CloudRain className="w-3 h-3" /> },
+            { id: "snow", label: "Snow", icon: <Snowflake className="w-3 h-3" /> },
+          ] as const
+        ).map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => {
+              setHeatmapEnabled(true);
+              setHeatmapLayer(opt.id);
+            }}
+            className={`px-2 py-1 rounded text-[11px] font-medium inline-flex items-center gap-1 transition ${
+              heatmapEnabled && heatmapLayer === opt.id
+                ? "bg-sky-500 text-slate-950 font-bold shadow"
+                : "text-slate-300 hover:text-white"
+            }`}
+          >
+            {opt.icon}
+            <span>{opt.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Bottom-Left Compact & Collapsible Map Legend (MP-8: Color + Shape + Active Layer Thresholds) */}
+      <div className="absolute bottom-3 left-3 z-10 bg-slate-900/92 backdrop-blur-md border border-slate-700/80 rounded-lg p-2 shadow-xl max-w-md pointer-events-auto">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 flex-wrap">
+            {ORDERED_LEVELS.map((lvl) => (
+              <div
+                key={lvl}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-950/75 border border-slate-800 text-[10px]"
               >
-                {RISK_SHAPES[lvl]}
-              </span>
-              <span className="text-slate-200 font-medium truncate">
-                {lvl === "No Travel" ? "No Trvl" : lvl === "Moderate" ? "Mod" : lvl}
-              </span>
-            </div>
-          ))}
+                <span
+                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0"
+                  style={{ backgroundColor: RISK_COLORS[lvl] }}
+                >
+                  {RISK_SHAPES[lvl]}
+                </span>
+                <span className="text-slate-200 font-medium">
+                  {lvl === "No Travel"
+                    ? "No Trvl"
+                    : lvl === "Moderate"
+                    ? "Mod"
+                    : lvl === "Unknown"
+                    ? "Unk"
+                    : lvl}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowLegendDetails(!showLegendDetails)}
+            className="text-[10px] font-mono text-sky-300 bg-sky-950/70 hover:bg-sky-900/70 px-1.5 py-0.5 rounded border border-sky-800/60 inline-flex items-center gap-0.5 shrink-0"
+          >
+            <span>{heatmapLayer.toUpperCase()}</span>
+            {showLegendDetails ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronUp className="w-3 h-3" />
+            )}
+          </button>
         </div>
 
-        <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
-          {heatmapLayer === "risk" && (
-            <span className="flex items-center gap-1">
-              <ShieldAlert className="w-3 h-3 text-amber-400" />
-              Overall Risk (0=Low → 4=No Travel, load-adjusted)
+        {showLegendDetails && (
+          <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1">
+              <Layers className="w-3 h-3 text-sky-400" />
+              <span>Risk & Checkpoint Legend (Color + Shape)</span>
             </span>
-          )}
-          {heatmapLayer === "wind" && (
-            <span className="flex items-center gap-1">
-              <Wind className="w-3 h-3 text-sky-400" />
-              Wind/Gust: &lt;25 Low • 25–35 Mod • 35–45 High • 45–55 Sev • ≥55
-              mph No Travel
+            {heatmapLayer === "risk" && (
+              <span className="flex items-center gap-1">
+                <ShieldAlert className="w-3 h-3 text-amber-400" />
+                Overall Risk (0=Low → 4=No Travel, load-adjusted)
+              </span>
+            )}
+            {heatmapLayer === "wind" && (
+              <span className="flex items-center gap-1">
+                <Wind className="w-3 h-3 text-sky-400" />
+                Wind/Gust: &lt;25 Low • 25–35 Mod • 35–45 High • 45–55 Sev • ≥55
+                mph No Travel
+              </span>
+            )}
+            {heatmapLayer === "rain" && (
+              <span className="flex items-center gap-1">
+                <CloudRain className="w-3 h-3 text-sky-400" />
+                Rain: &lt;0.10 Low • 0.10–0.25 Mod • &gt;0.25–0.50 High •
+                &gt;0.50–1.00 Sev • &gt;1.00 in/hr No Travel
+              </span>
+            )}
+            {heatmapLayer === "snow" && (
+              <span className="flex items-center gap-1">
+                <Snowflake className="w-3 h-3 text-sky-400" />
+                Snow: &lt;0.5 Low • 0.5–1.0 Mod • &gt;1.0–2.0 High • &gt;2.0–3.0
+                Sev • &gt;3.0 in/hr No Travel
+              </span>
+            )}
+            <span className="text-slate-300 font-medium">
+              🚚 Truck position at +{sliderHour}h
             </span>
-          )}
-          {heatmapLayer === "rain" && (
-            <span className="flex items-center gap-1">
-              <CloudRain className="w-3 h-3 text-sky-400" />
-              Rain: &lt;0.10 Low • 0.10–0.25 Mod • &gt;0.25–0.50 High •
-              &gt;0.50–1.00 Sev • &gt;1.00 in/hr No Travel
-            </span>
-          )}
-          {heatmapLayer === "snow" && (
-            <span className="flex items-center gap-1">
-              <Snowflake className="w-3 h-3 text-sky-400" />
-              Snow: &lt;0.5 Low • 0.5–1.0 Mod • &gt;1.0–2.0 High • &gt;2.0–3.0
-              Sev • &gt;3.0 in/hr No Travel
-            </span>
-          )}
-          <span className="text-slate-300 font-medium">
-            🚚 Truck position at +{sliderHour}h
-          </span>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

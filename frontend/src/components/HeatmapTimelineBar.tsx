@@ -85,86 +85,9 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
     : 0;
 
   return (
-    <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-3.5 shadow-2xl space-y-2.5">
-      {/* Top Row: Toggle, Layer Switcher, Opacity, Truck Status */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setHeatmapEnabled(!heatmapEnabled)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
-              heatmapEnabled
-                ? "bg-sky-500/20 text-sky-300 border-sky-500/50"
-                : "bg-slate-800 text-slate-400 border-slate-700"
-            }`}
-          >
-            {heatmapEnabled ? (
-              <Eye className="w-3.5 h-3.5" />
-            ) : (
-              <EyeOff className="w-3.5 h-3.5" />
-            )}
-            <span>Corridor Heatmap</span>
-          </button>
-
-          {/* Layer Selector: Overall Risk, Wind, Rain, Snow (HM-6) */}
-          <div
-            role="group"
-            aria-label="Heatmap Layer Mode"
-            className="inline-flex rounded-lg bg-slate-950/80 p-0.5 border border-slate-800"
-          >
-            {LAYER_OPTIONS.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => {
-                  setHeatmapEnabled(true);
-                  setHeatmapLayer(opt.id);
-                }}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition ${
-                  heatmapLayer === opt.id && heatmapEnabled
-                    ? "bg-sky-500 text-slate-950 font-semibold shadow"
-                    : "text-slate-300 hover:text-white"
-                }`}
-              >
-                {opt.icon}
-                <span>{opt.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Opacity Slider & Grid Cell Info */}
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          {isLoadingHeatmap ? (
-            <span className="text-sky-400 animate-pulse font-mono">
-              Loading 49-hour corridor grid...
-            </span>
-          ) : (
-            heatmap && (
-              <span className="hidden md:inline font-mono text-[11px]">
-                {heatmap.cellCount} grid cells · ±{heatmap.corridorBufferMiles}{" "}
-                mi buffer · 0 network calls on scrub
-              </span>
-            )
-          )}
-          <label className="flex items-center gap-1.5">
-            <span className="text-[11px]">Opacity</span>
-            <input
-              type="range"
-              min={0.2}
-              max={1}
-              step={0.05}
-              value={heatmapOpacity}
-              onChange={(e) => setHeatmapOpacity(Number(e.target.value))}
-              aria-label="Heatmap Opacity"
-              className="w-16 accent-sky-400 cursor-pointer"
-            />
-          </label>
-        </div>
-      </div>
-
-      {/* Middle Row: Play/Pause, Prev/Next, 0-48h Slider */}
-      <div className="flex items-center gap-2.5">
+    <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-3 shadow-2xl space-y-2">
+      {/* Row 1: Play/Pause + 0-48h Scrubber + Speed + Opacity */}
+      <div className="flex flex-wrap items-center gap-2.5">
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -203,8 +126,8 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
         </div>
 
         {/* 0-48h Slider with Active Trip Window Highlight (HM-4, HM-8) */}
-        <div className="flex-1 relative">
-          <div className="flex items-center justify-between text-xs mb-1">
+        <div className="flex-1 min-w-[200px] relative">
+          <div className="flex items-center justify-between text-xs mb-0.5">
             <span className="font-mono font-bold text-sky-300">
               Hour +{sliderHour}h{" "}
               <span className="text-slate-300 font-normal">
@@ -212,9 +135,15 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
               </span>
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400 hidden sm:inline">
-                Active trip window: 0h – +{tripDurationHours}h
-              </span>
+              {isLoadingHeatmap ? (
+                <span className="text-sky-400 animate-pulse font-mono text-[11px]">
+                  Loading 49h grid...
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  Trip window: 0h – +{tripDurationHours}h
+                </span>
+              )}
               <select
                 value={playbackSpeedMs}
                 onChange={(e) => setPlaybackSpeedMs(Number(e.target.value))}
@@ -229,7 +158,6 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
           </div>
 
           <div className="relative flex items-center">
-            {/* Highlight bar showing the truck's active travel hours (0..tripDurationHours) */}
             {tripDurationHours > 0 && (
               <div
                 style={{
@@ -257,7 +185,7 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
             />
           </div>
 
-          <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-0.5">
+          <div className="flex justify-between text-[10px] font-mono text-slate-500">
             <span>0h (Depart)</span>
             <span>+12h</span>
             <span>+24h</span>
@@ -267,10 +195,11 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
         </div>
       </div>
 
-      {/* Bottom Row: Truck Position Status at Slider Hour (HM-8) */}
-      {truckPos && (
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-xs">
-          <div className="flex items-center gap-2">
+      {/* Row 2: Compact Truck Live Status + Layer Switcher & Opacity */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-800/80 text-xs">
+        {/* Truck Position Status at Slider Hour (HM-8) */}
+        {truckPos ? (
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-semibold">
               <Truck className="w-3.5 h-3.5" />
               {truckPos.arrived
@@ -278,15 +207,11 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
                 : `Truck @ Mile ${truckPos.mile.toFixed(0)}`}
             </span>
             <span className="text-slate-300 font-medium">{truckPos.place}</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
             {truckPos.windMph !== null && (
-              <span className="font-mono text-[11px] text-slate-300">
-                Wind: <strong>{truckPos.windMph.toFixed(1)}</strong> mph · Rain:{" "}
-                <strong>{(truckPos.rainInHr ?? 0).toFixed(2)}</strong> in/hr ·
-                Snow: <strong>{(truckPos.snowInHr ?? 0).toFixed(2)}</strong>{" "}
-                in/hr
+              <span className="font-mono text-[11px] text-slate-400 hidden md:inline">
+                ({truckPos.windMph.toFixed(0)} mph · R:{" "}
+                {(truckPos.rainInHr ?? 0).toFixed(2)}&quot; · S:{" "}
+                {(truckPos.snowInHr ?? 0).toFixed(2)}&quot;)
               </span>
             )}
             <span
@@ -297,8 +222,71 @@ export const HeatmapTimelineBar: React.FC<HeatmapTimelineBarProps> = ({
               {RISK_SHAPES[truckPos.level]} {truckPos.level}
             </span>
           </div>
+        ) : (
+          <div className="text-[11px] text-slate-400">
+            Scrub 0h–48h to inspect hourly corridor weather
+          </div>
+        )}
+
+        {/* Layer Switcher + Opacity */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHeatmapEnabled(!heatmapEnabled)}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition ${
+              heatmapEnabled
+                ? "bg-sky-500/20 text-sky-300 border-sky-500/50"
+                : "bg-slate-800 text-slate-400 border-slate-700"
+            }`}
+          >
+            {heatmapEnabled ? (
+              <Eye className="w-3 h-3" />
+            ) : (
+              <EyeOff className="w-3 h-3" />
+            )}
+            <span className="hidden sm:inline">Heatmap</span>
+          </button>
+
+          <div
+            role="group"
+            aria-label="Heatmap Layer Mode"
+            className="inline-flex rounded-lg bg-slate-950/80 p-0.5 border border-slate-800"
+          >
+            {LAYER_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  setHeatmapEnabled(true);
+                  setHeatmapLayer(opt.id);
+                }}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition ${
+                  heatmapLayer === opt.id && heatmapEnabled
+                    ? "bg-sky-500 text-slate-950 font-semibold shadow"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                {opt.icon}
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <label className="flex items-center gap-1 text-[11px] text-slate-400">
+            <span>Opacity</span>
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.05}
+              value={heatmapOpacity}
+              onChange={(e) => setHeatmapOpacity(Number(e.target.value))}
+              aria-label="Heatmap Opacity"
+              className="w-14 accent-sky-400 cursor-pointer"
+            />
+          </label>
         </div>
-      )}
+      </div>
     </div>
   );
 };

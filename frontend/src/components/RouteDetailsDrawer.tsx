@@ -3,6 +3,9 @@ import {
   AlertTriangle,
   ArrowUpDown,
   CalendarClock,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Filter,
   Info,
   MapPin,
@@ -46,11 +49,15 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
   const [filterHighPlus, setFilterHighPlus] = useState(false);
   const [sortBy, setSortBy] = useState<"mile" | "risk" | "wind">("mile");
   const [sortAsc, setSortAsc] = useState(true);
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
 
   if (!selectedRoute) return null;
 
   const checkpoints = selectedRoute.checkpoints;
   const totalMiles = Math.max(1, selectedRoute.distanceMi);
+  const highOrWorseCount = checkpoints.filter(
+    (cp) => cp.score >= 2 || cp.score < 0
+  ).length;
 
   const filteredCheckpoints = checkpoints
     .filter((cp) => (filterHighPlus ? cp.score >= 2 || cp.score < 0 : true))
@@ -74,16 +81,29 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-4 shadow-xl space-y-3.5">
+    <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-3.5 shadow-xl space-y-3">
       {/* Risk Profile Strip Under Selected Route (PRD MP-6) */}
       <div>
-        <div className="flex items-center justify-between text-xs mb-1.5">
-          <span className="font-semibold text-slate-300">
-            Route Risk Profile Strip · {selectedRoute.label} (
-            {selectedRoute.distanceMi.toFixed(0)} mi)
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-1.5">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-200">
+              Route Risk Profile · {selectedRoute.label} (
+              {selectedRoute.distanceMi.toFixed(0)} mi)
+            </span>
+            {highOrWorseCount > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/20 text-orange-300 border border-orange-500/40">
+                <AlertTriangle className="w-3 h-3" />
+                {highOrWorseCount} Hazard Checkpoint
+                {highOrWorseCount > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
+                <CheckCircle2 className="w-3 h-3" />0 High/Severe Hazards
+              </span>
+            )}
+          </div>
           <span className="text-[11px] text-slate-400">
-            Click any segment or checkpoint to inspect on map
+            Click any bar segment to inspect on map
           </span>
         </div>
 
@@ -123,12 +143,15 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
         </div>
       </div>
 
-      {/* Tabs: Checkpoints Table | Departure Window Finder | Risk & Load Rules */}
+      {/* Tabs: Checkpoints Table | Departure Window Finder | Risk & Load Rules + Collapse Toggle */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setActiveDetailTab("checkpoints")}
+            onClick={() => {
+              setActiveDetailTab("checkpoints");
+              setIsDrawerExpanded(true);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               activeDetailTab === "checkpoints"
                 ? "bg-sky-500 text-slate-950 shadow"
@@ -139,7 +162,10 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveDetailTab("departure-window")}
+            onClick={() => {
+              setActiveDetailTab("departure-window");
+              setIsDrawerExpanded(true);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
               activeDetailTab === "departure-window"
                 ? "bg-sky-500 text-slate-950 shadow"
@@ -151,7 +177,10 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveDetailTab("rules")}
+            onClick={() => {
+              setActiveDetailTab("rules");
+              setIsDrawerExpanded(true);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
               activeDetailTab === "rules"
                 ? "bg-sky-500 text-slate-950 shadow"
@@ -163,8 +192,8 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
           </button>
         </div>
 
-        {activeDetailTab === "checkpoints" && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {activeDetailTab === "checkpoints" && isDrawerExpanded && (
             <button
               type="button"
               onClick={() => setFilterHighPlus(!filterHighPlus)}
@@ -175,14 +204,31 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
               }`}
             >
               <Filter className="w-3 h-3" />
-              <span>High & Above Only</span>
+              <span>
+                {filterHighPlus
+                  ? `Showing Hazards (${highOrWorseCount})`
+                  : `High & Above Only (${highOrWorseCount})`}
+              </span>
             </button>
-          </div>
-        )}
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700 transition"
+          >
+            <span>{isDrawerExpanded ? "Collapse" : "Expand Table"}</span>
+            {isDrawerExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Tab 1: Sortable Checkpoints Table (MP-7) */}
-      {activeDetailTab === "checkpoints" && (
+      {isDrawerExpanded && activeDetailTab === "checkpoints" && (
         <div className="overflow-x-auto max-h-72 overflow-y-auto rounded-lg border border-slate-800">
           <table className="w-full text-left border-collapse text-xs">
             <thead className="bg-slate-950/90 text-slate-400 uppercase text-[10px] sticky top-0 z-10 border-b border-slate-800">
@@ -316,7 +362,7 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
       )}
 
       {/* Tab 2: Departure Window Finder (SC-6) */}
-      {activeDetailTab === "departure-window" && (
+      {isDrawerExpanded && activeDetailTab === "departure-window" && (
         <div className="space-y-2.5">
           {isLoadingDepartureWindow ? (
             <div className="py-6 text-center text-xs text-sky-400 animate-pulse">
@@ -425,7 +471,7 @@ export const RouteDetailsDrawer: React.FC<RouteDetailsDrawerProps> = ({
       )}
 
       {/* Tab 3: Risk & Load Rules Table Reference */}
-      {activeDetailTab === "rules" && (
+      {isDrawerExpanded && activeDetailTab === "rules" && (
         <div className="space-y-3 text-xs">
           <div className="overflow-x-auto rounded-lg border border-slate-800">
             <table className="w-full text-left border-collapse">

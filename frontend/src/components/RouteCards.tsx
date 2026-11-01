@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertOctagon,
   AlertTriangle,
   Award,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Route,
   ShieldAlert,
@@ -34,11 +36,12 @@ export const RecommendationBanner: React.FC<RecommendationBannerProps> = ({
   forecastIssuedAt,
 }) => {
   const isAllBlocked = recommendation.allBlocked;
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <div className="space-y-2">
       <div
-        className={`rounded-xl border p-3.5 shadow-lg ${
+        className={`rounded-xl border p-3 shadow-lg ${
           isAllBlocked
             ? "bg-red-950/50 border-red-500/60 text-red-100"
             : "bg-emerald-950/40 border-emerald-500/50 text-emerald-100"
@@ -51,23 +54,42 @@ export const RecommendationBanner: React.FC<RecommendationBannerProps> = ({
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-1.5">
               <h2 className="text-sm font-bold tracking-tight">
                 {recommendation.headline}
               </h2>
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-900/70 px-2 py-0.5 rounded border border-slate-700/60">
-                {forecastSource} · Issued {forecastIssuedAt.slice(0, 16)}Z
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowDetails(!showDetails)}
+                className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-slate-900/70 hover:bg-slate-900 text-sky-300 border border-slate-700/70 transition"
+              >
+                <span>{showDetails ? "Hide details" : "Why this route?"}</span>
+                {showDetails ? (
+                  <ChevronUp className="w-3 h-3" />
+                ) : (
+                  <ChevronDown className="w-3 h-3" />
+                )}
+              </button>
             </div>
+
             <p className="text-xs mt-1 leading-relaxed text-slate-200">
               {recommendation.explanation}
             </p>
-            {recommendation.reasons.length > 1 && (
-              <ul className="mt-2 space-y-0.5 text-[11px] text-slate-300 list-disc list-inside">
-                {recommendation.reasons.slice(1).map((r, idx) => (
-                  <li key={idx}>{r}</li>
-                ))}
-              </ul>
+
+            {showDetails && (
+              <div className="mt-2 pt-2 border-t border-slate-700/50 space-y-1.5 text-[11px]">
+                {recommendation.reasons.length > 1 && (
+                  <ul className="space-y-0.5 text-slate-300 list-disc list-inside">
+                    {recommendation.reasons.slice(1).map((r, idx) => (
+                      <li key={idx}>{r}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="text-[10px] font-mono text-slate-400">
+                  Source: {forecastSource} · Issued{" "}
+                  {forecastIssuedAt.slice(0, 16)}Z
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -111,10 +133,31 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
   onSelectRoute,
   onHoverRoute,
 }) => {
+  const [expandAllCards, setExpandAllCards] = useState(false);
+
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Compare {routes.length} Corridors (Click to Inspect)
+        </span>
+        <button
+          type="button"
+          onClick={() => setExpandAllCards(!expandAllCards)}
+          className="text-[11px] text-sky-400 hover:text-sky-300 font-medium inline-flex items-center gap-1"
+        >
+          <span>{expandAllCards ? "Compact view" : "Expand all details"}</span>
+          {expandAllCards ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )}
+        </button>
+      </div>
+
       {routes.map((route) => {
         const isSelected = route.id === selectedRouteId;
+        const isExpanded = isSelected || expandAllCards;
         const isLeastBad =
           route.blocked &&
           !route.recommended &&
@@ -138,7 +181,7 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
             }}
             onMouseEnter={() => onHoverRoute(route.id)}
             onMouseLeave={() => onHoverRoute(null)}
-            className={`rounded-xl border p-3.5 transition cursor-pointer text-left ${
+            className={`rounded-xl border p-3 transition cursor-pointer text-left ${
               isSelected
                 ? "bg-slate-900 border-sky-400 ring-2 ring-sky-500/30 shadow-lg"
                 : "bg-slate-900/75 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
@@ -147,7 +190,13 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
             {/* Card Header: Label + Badges */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700">
+                <span
+                  className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border ${
+                    isSelected
+                      ? "bg-sky-500 text-slate-950 border-sky-400"
+                      : "bg-slate-800 text-slate-200 border-slate-700"
+                  }`}
+                >
                   #{route.rank}
                 </span>
                 <div className="min-w-0">
@@ -163,18 +212,18 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
 
               <div className="flex items-center gap-1.5 flex-wrap">
                 {route.recommended && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/50">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/50">
                     <Award className="w-3.5 h-3.5" />
                     Recommended
                   </span>
                 )}
                 {isLeastBad && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-200 border border-amber-500/50">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-200 border border-amber-500/50">
                     Least-Bad Option
                   </span>
                 )}
                 {route.blocked && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-900/60 text-red-200 border border-red-500/70">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-900/60 text-red-200 border border-red-500/70">
                     <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
                     Blocked
                   </span>
@@ -189,8 +238,8 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
               </div>
             </div>
 
-            {/* Distance, Duration, Arrival & Avg Risk */}
-            <div className="grid grid-cols-4 gap-2 mt-3 pt-2.5 border-t border-slate-800/80 text-xs">
+            {/* Key Metrics Row (Always visible for instant comparison) */}
+            <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2 border-t border-slate-800/80 text-xs">
               <div>
                 <div className="text-[10px] uppercase text-slate-400">
                   Distance
@@ -230,9 +279,9 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
               </div>
             </div>
 
-            {/* Stacked Risk Mileage Bar (MP-5) */}
-            <div className="mt-3 space-y-1.5">
-              <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden flex">
+            {/* Stacked Risk Mileage Bar (Always visible so color proportions are scannable at a glance) */}
+            <div className="mt-2.5 space-y-1.5">
+              <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden flex">
                 {ORDERED_LEVELS.map((lvl) => {
                   const miles = m.milesByLevel[lvl] ?? 0;
                   if (miles <= 0) return null;
@@ -250,49 +299,62 @@ export const RouteCardsList: React.FC<RouteCardsListProps> = ({
                 })}
               </div>
 
-              {/* Mileage Breakdown Pills */}
-              <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-300">
-                <div className="flex flex-wrap items-center gap-2">
-                  {ORDERED_LEVELS.map((lvl) => {
-                    const miles = m.milesByLevel[lvl] ?? 0;
-                    if (miles <= 0) return null;
-                    return (
-                      <span
-                        key={lvl}
-                        className="inline-flex items-center gap-1 font-mono"
-                      >
-                        <span
-                          style={{ color: RISK_COLORS[lvl] }}
-                          className="text-xs leading-none"
-                        >
-                          {RISK_SHAPES[lvl]}
-                        </span>
-                        <span>
-                          {lvl}: <strong>{miles.toFixed(0)}</strong> mi
-                        </span>
-                      </span>
-                    );
-                  })}
+              {/* Detailed Breakdown (Shown for Selected Route or when Expand All is active) */}
+              {isExpanded ? (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-300 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {ORDERED_LEVELS.map((lvl) => {
+                        const miles = m.milesByLevel[lvl] ?? 0;
+                        if (miles <= 0) return null;
+                        return (
+                          <span
+                            key={lvl}
+                            className="inline-flex items-center gap-1 font-mono"
+                          >
+                            <span
+                              style={{ color: RISK_COLORS[lvl] }}
+                              className="text-xs leading-none"
+                            >
+                              {RISK_SHAPES[lvl]}
+                            </span>
+                            <span>
+                              {lvl}: <strong>{miles.toFixed(0)}</strong> mi
+                            </span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Tradeoff vs Fastest & Worst Checkpoint Reason */}
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
+                    <span className="text-sky-300 font-medium">
+                      {route.tradeoff.summary}
+                    </span>
+                    <span className="text-slate-400 truncate">
+                      Peak: Mile {m.worstCheckpoint.mile.toFixed(0)} (
+                      {m.worstCheckpoint.place})
+                    </span>
+                  </div>
+
+                  {route.blocked && route.blockedReason && (
+                    <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-500/40 text-[11px] text-red-200">
+                      {route.blockedReason}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-between gap-2 text-[11px] pt-0.5">
+                  <span className="text-sky-300/90 truncate font-medium">
+                    {route.tradeoff.summary}
+                  </span>
+                  <span className="text-slate-500 shrink-0 text-[10px]">
+                    Click to inspect ▸
+                  </span>
                 </div>
-              </div>
+              )}
             </div>
-
-            {/* Tradeoff vs Fastest & Worst Checkpoint Reason */}
-            <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
-              <span className="text-sky-300 font-medium">
-                {route.tradeoff.summary}
-              </span>
-              <span className="text-slate-400 truncate">
-                Peak: Mile {m.worstCheckpoint.mile.toFixed(0)} (
-                {m.worstCheckpoint.place})
-              </span>
-            </div>
-
-            {route.blocked && route.blockedReason && (
-              <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-500/40 text-[11px] text-red-200">
-                {route.blockedReason}
-              </div>
-            )}
           </div>
         );
       })}

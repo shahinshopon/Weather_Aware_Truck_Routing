@@ -544,7 +544,27 @@ def build_heatmap_payload(analysis_id: str) -> dict[str, object]:
         grid_resolution_deg=0.1,
     )
 
-    cell_coords = [(c.grid_lat, c.grid_lng) for c in corridor_cells]
+    # Precompute hourly truck coordinates across routes so their snapped 0.1° grid cells
+    # are always included in fetch_grid_forecasts
+    hourly_route_points: dict[str, list[tuple[float, float, float, bool]]] = {}
+    extra_truck_coords: list[tuple[float, float]] = []
+    for r in raw_routes:
+        pts: list[tuple[float, float, float, bool]] = []
+        for h_idx in range(49):
+            elapsed_min = h_idx * 60.0
+            in_transit = elapsed_min <= r.duration_min
+            lat, lng, mile = point_at_elapsed_minutes(
+                r.coordinates, float(r.duration_min), elapsed_min
+            )
+            pts.append((lat, lng, mile, in_transit))
+            extra_truck_coords.append(snap_to_grid(lat, lng, 0.1))
+        hourly_route_points[r.id] = pts
+
+    cell_coords = list(
+        dict.fromkeys(
+            [(c.grid_lat, c.grid_lng) for c in corridor_cells] + extra_truck_coords
+        )
+    )
     grid_map, issued_at, source_name = fetch_grid_forecasts(
         cell_coords,
         dep_dt,
@@ -602,12 +622,10 @@ def build_heatmap_payload(analysis_id: str) -> dict[str, object]:
     truck_positions_by_route: dict[str, list[dict[str, object]]] = {}
     for r in raw_routes:
         positions: list[dict[str, object]] = []
+        pts = hourly_route_points[r.id]
         for h_idx, ts in enumerate(hour_timestamps):
             elapsed_min = h_idx * 60.0
-            in_transit = elapsed_min <= r.duration_min
-            lat, lng, mile = point_at_elapsed_minutes(
-                r.coordinates, float(r.duration_min), elapsed_min
-            )
+            lat, lng, mile, in_transit = pts[h_idx]
             g_key = snap_to_grid(lat, lng, 0.1)
             wx = interpolate_weather_at_eta(grid_map.get(g_key), ts)
             risk_res = classify_checkpoint_risk(wx, load_weight_lb, gust_aware=gust_aware)
